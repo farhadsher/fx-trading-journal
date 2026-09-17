@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FX Trading Journal</title>
+<style>
+  :root {
+    --bg: #0f1420;
+    --card: #161d2e;
+    --border: #232c42;
+    --text: #e7ecf7;
+    --muted: #8b93a7;
+    --accent: #4f8cff;
+    --win: #22c58b;
+    --loss: #ff5c5c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px 16px 64px;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  header { margin-bottom: 20px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  p.sub { color: var(--muted); margin: 0; font-size: 0.9rem; }
+  p.sub a { color: var(--accent); text-decoration: none; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .stat .label { color: var(--muted); font-size: 0.75rem; margin-bottom: 6px; }
+  .stat .value { font-size: 1.25rem; font-weight: 700; }
+  .pos { color: var(--win); }
+  .neg { color: var(--loss); }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 1rem; margin: 0 0 14px; }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    align-items: end;
+  }
+  label { display: block; font-size: 0.75rem; color: var(--muted); margin-bottom: 5px; }
+  input, select {
+    width: 100%;
+    background: #0f1420;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 10px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); }
+  button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(1.08); }
+  button.ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: none; }
+  .del-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 2px 6px;
+  }
+  .del-btn:hover { color: var(--loss); }
+  .empty { color: var(--muted); font-size: 0.85rem; padding: 20px 0; text-align: center; }
+  .table-wrap { overflow-x: auto; }
+
+  svg text { fill: var(--muted); font-size: 10px; }
+  footer { text-align: center; color: var(--muted); font-size: 0.78rem; margin-top: 28px; }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>FX Trading Journal</h1>
+    <p class="sub">Log trades, track your edge, and see your equity curve — 100% local, nothing leaves your browser. Free tool by <a href="https://fxmare.com">FXMARE</a>.</p>
+  </header>
+
+  <div class="grid" id="statsGrid"></div>
+
+  <div class="card">
+    <h2>Equity curve</h2>
+    <div id="chartWrap"></div>
+  </div>
+
+  <div class="card">
+    <h2>Log a trade</h2>
+    <div class="form-grid">
+      <div>
+        <label for="fDate">Date</label>
+        <input type="date" id="fDate">
+      </div>
+      <div>
+        <label for="fPair">Pair / symbol</label>
+        <input type="text" id="fPair" placeholder="EUR/USD">
+      </div>
+      <div>
+        <label for="fDir">Direction</label>
+        <select id="fDir">
+          <option value="Long">Long</option>
+          <option value="Short">Short</option>
+        </select>
+      </div>
+      <div>
+        <label for="fRisk">Risk ($)</label>
+        <input type="number" id="fRisk" step="0.01" placeholder="optional">
+      </div>
+      <div>
+        <label for="fPnl">Result ($)</label>
+        <input type="number" id="fPnl" step="0.01" placeholder="e.g. 45 or -20">
+      </div>
+      <div>
+        <label for="fTag">Setup / tag</label>
+        <input type="text" id="fTag" placeholder="optional">
+      </div>
+      <div>
+        <button onclick="addTrade()">Add trade</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Trades</h2>
+    <div class="toolbar">
+      <button class="ghost" onclick="exportCsv()">Export CSV</button>
+      <label class="ghost" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;margin:0;">
+        Import CSV
+        <input type="file" id="importFile" accept=".csv" style="display:none;" onchange="importCsv(event)">
+      </label>
+      <button class="ghost" onclick="clearAll()">Clear all</button>
+    </div>
+    <div class="table-wrap">
+      <table id="tradeTable">
+        <thead>
+          <tr>
+            <th>Date</th><th>Pair</th><th>Dir</th><th>Tag</th>
+            <th class="num">Risk</th><th class="num">P&amp;L</th><th class="num">R</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="tradeBody"></tbody>
+      </table>
+      <div class="empty" id="emptyMsg" style="display:none;">No trades logged yet — add your first one above.</div>
+    </div>
+  </div>
+
+  <footer>
+    Your data is stored only in this browser's local storage — nothing is sent anywhere. Clearing browser data will erase it, so export CSV backups regularly.
+    <br>Built by <a href="https://fxmare.com">FXMARE</a> · MIT licensed
+  </footer>
+</div>
+
+<script>
+const STORAGE_KEY = 'fxmare_journal_trades_v1';
+
+function loadTrades() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveTrades(trades) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+  } catch (e) { /* storage unavailable, ignore */ }
+}
+
+let trades = loadTrades();
+
+document.getElementById('fDate').valueAsDate = new Date();
+
+function addTrade() {
+  const date = document.getElementById('fDate').value || new Date().toISOString().slice(0, 10);
+  const pair = document.getElementById('fPair').value.trim();
+  const dir = document.getElementById('fDir').value;
+  const risk = parseFloat(document.getElementById('fRisk').value);
+  const pnl = parseFloat(document.getElementById('fPnl').value);
+  const tag = document.getElementById('fTag').value.trim();
+
+  if (!pair || isNaN(pnl)) {
+    alert('Enter at least a pair and a result ($) to log a trade.');
+    return;
+  }
+
+  trades.push({ date, pair, dir, risk: isNaN(risk) ? null : risk, pnl, tag });
+  saveTrades(trades);
+  document.getElementById('fPair').value = '';
+  document.getElementById('fRisk').value = '';
+  document.getElementById('fPnl').value = '';
+  document.getElementById('fTag').value = '';
+  render();
+}
+
+function deleteTrade(idx) {
+  trades.splice(idx, 1);
+  saveTrades(trades);
+  render();
+}
+
+function clearAll() {
+  if (!trades.length) return;
+  if (confirm('Delete all logged trades? This cannot be undone (export CSV first if you want a backup).')) {
+    trades = [];
+    saveTrades(trades);
+    render();
+  }
+}
+
+function fmt(n, digits) {
+  digits = digits === undefined ? 2 : digits;
+  return Number(n).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+
+function computeStats() {
+  const total = trades.length;
+  const wins = trades.filter(t => t.pnl > 0);
+  const losses = trades.filter(t => t.pnl < 0);
+  const totalPnl = trades.reduce((s, t) => s + t.pnl, 0);
+  const grossWin = wins.reduce((s, t) => s + t.pnl, 0);
+  const grossLoss = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
+  const winRate = total ? (wins.length / total) * 100 : 0;
+  const profitFactor = grossLoss > 0 ? grossWin / grossLoss : (grossWin > 0 ? Infinity : 0);
+  const avgWin = wins.length ? grossWin / wins.length : 0;
+  const avgLoss = losses.length ? grossLoss / losses.length : 0;
+  const rMultiples = trades.filter(t => t.risk && t.risk > 0).map(t => t.pnl / t.risk);
+  const avgR = rMultiples.length ? rMultiples.reduce((s, r) => s + r, 0) / rMultiples.length : null;
+  return { total, wins: wins.length, losses: losses.length, totalPnl, winRate, profitFactor, avgWin, avgLoss, avgR };
+}
+
+function renderStats() {
+  const s = computeStats();
+  const pfLabel = s.profitFactor === Infinity ? '∞' : fmt(s.profitFactor, 2);
+  const items = [
+    { label: 'Total P&L', value: (s.totalPnl >= 0 ? '+' : '') + fmt(s.totalPnl), cls: s.totalPnl >= 0 ? 'pos' : 'neg' },
+    { label: 'Total trades', value: s.total },
+    { label: 'Win rate', value: fmt(s.winRate, 1) + '%' },
+    { label: 'Profit factor', value: pfLabel },
+    { label: 'Avg win', value: '+' + fmt(s.avgWin), cls: 'pos' },
+    { label: 'Avg loss', value: '-' + fmt(s.avgLoss), cls: 'neg' },
+    { label: 'Avg R multiple', value: s.avgR === null ? '—' : (s.avgR >= 0 ? '+' : '') + fmt(s.avgR, 2) + 'R' },
+  ];
+  document.getElementById('statsGrid').innerHTML = items.map(i =>
+    `<div class="stat"><div class="label">${i.label}</div><div class="value ${i.cls || ''}">${i.value}</div></div>`
+  ).join('');
+}
+
+function renderChart() {
+  const wrap = document.getElementById('chartWrap');
+  if (!trades.length) {
+    wrap.innerHTML = '<div class="empty">Log a trade to see your equity curve.</div>';
+    return;
+  }
+  const sorted = [...trades].sort((a, b) => new Date(a.date) - new Date(b.date));
+  let running = 0;
+  const points = sorted.map(t => { running += t.pnl; return running; });
+  points.unshift(0);
+
+  const w = wrap.clientWidth || 880;
+  const h = 220;
+  const padL = 46, padR = 14, padT = 14, padB = 24;
+  const min = Math.min(0, ...points);
+  const max = Math.max(0, ...points);
+  const range = (max - min) || 1;
+
+  const x = i => padL + (i / (points.length - 1 || 1)) * (w - padL - padR);
+  const y = v => padT + (1 - (v - min) / range) * (h - padT - padB);
+
+  const path = points.map((v, i) => (i === 0 ? 'M' : 'L') + x(i).toFixed(1) + ',' + y(v).toFixed(1)).join(' ');
+  const zeroY = y(0).toFixed(1);
+  const lineColor = points[points.length - 1] >= 0 ? '#22c58b' : '#ff5c5c';
+
+  wrap.innerHTML = `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <line x1="${padL}" y1="${zeroY}" x2="${w - padR}" y2="${zeroY}" stroke="#232c42" stroke-dasharray="4 4"/>
+    <text x="4" y="${parseFloat(zeroY) + 4}">0</text>
+    <text x="4" y="${padT + 8}">${fmt(max, 0)}</text>
+    <text x="4" y="${h - padB + 4}">${fmt(min, 0)}</text>
+    <path d="${path}" fill="none" stroke="${lineColor}" stroke-width="2"/>
+  </svg>`;
+}
+
+function renderTable() {
+  const body = document.getElementById('tradeBody');
+  const emptyMsg = document.getElementById('emptyMsg');
+  if (!trades.length) {
+    body.innerHTML = '';
+    emptyMsg.style.display = 'block';
+    return;
+  }
+  emptyMsg.style.display = 'none';
+  const rows = trades.map((t, i) => {
+    const r = t.risk ? (t.pnl / t.risk) : null;
+    return `<tr>
+      <td>${t.date}</td>
+      <td>${t.pair}</td>
+      <td>${t.dir}</td>
+      <td>${t.tag || ''}</td>
+      <td class="num">${t.risk ? fmt(t.risk) : '—'}</td>
+      <td class="num ${t.pnl >= 0 ? 'pos' : 'neg'}">${t.pnl >= 0 ? '+' : ''}${fmt(t.pnl)}</td>
+      <td class="num ${r === null ? '' : (r >= 0 ? 'pos' : 'neg')}">${r === null ? '—' : (r >= 0 ? '+' : '') + fmt(r, 2) + 'R'}</td>
+      <td><button class="del-btn" onclick="deleteTrade(${i})" title="Delete">✕</button></td>
+    </tr>`;
+  }).reverse();
+  body.innerHTML = rows.join('');
+}
+
+function exportCsv() {
+  if (!trades.length) { alert('No trades to export yet.'); return; }
+  const header = 'date,pair,direction,risk,pnl,tag\n';
+  const rows = trades.map(t => [t.date, t.pair, t.dir, t.risk ?? '', t.pnl, (t.tag || '').replace(/,/g, ';')].join(','));
+  const blob = new Blob([header + rows.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'fx-journal-trades.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importCsv(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const lines = e.target.result.split(/\r?\n/).filter(Boolean);
+    const start = lines[0].toLowerCase().startsWith('date') ? 1 : 0;
+    let added = 0;
+    for (let i = start; i < lines.length; i++) {
+      const parts = lines[i].split(',');
+      if (parts.length < 5) continue;
+      const [date, pair, dir, risk, pnl, tag] = parts;
+      const pnlNum = parseFloat(pnl);
+      if (!pair || isNaN(pnlNum)) continue;
+      trades.push({
+        date: date || new Date().toISOString().slice(0, 10),
+        pair, dir: dir || 'Long',
+        risk: risk === '' ? null : parseFloat(risk),
+        pnl: pnlNum,
+        tag: tag || ''
+      });
+      added++;
+    }
+    saveTrades(trades);
+    render();
+    alert(added + ' trade(s) imported.');
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function render() {
+  renderStats();
+  renderChart();
+  renderTable();
+}
+
+window.addEventListener('resize', renderChart);
+render();
+</script>
+</body>
+</html>
